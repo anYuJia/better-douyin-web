@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Archive,
@@ -39,21 +39,16 @@ const releases = {
 };
 
 const heroSignals = [
-  { label: "Archive", value: "批量归档" },
-  { label: "AI Chat", value: "提示词导入" },
-  { label: "MCP", value: "本机工具调用" },
+  { label: "GitHub Stars · 双版本合计", value: "1.1K+" },
+  { label: "Forks", value: "146" },
+  { label: "Release downloads", value: "16K+" },
 ];
 
-const tickerItems = [
-  "AI Chat",
-  "MCP Tools",
-  "Local Archive",
-  "Batch Workflow",
-  "Immersive Player",
-  "Prompt Import",
-  "Private Messages",
-  "Notification Reply",
-];
+const ambientParticles = [
+  [7, 18, 3, 16], [14, 72, 2, 10], [23, 36, 2, 18], [31, 87, 3, 12],
+  [42, 14, 2, 20], [49, 61, 3, 14], [58, 28, 2, 17], [66, 83, 2, 11],
+  [73, 46, 3, 19], [81, 17, 2, 13], [88, 67, 3, 16], [94, 38, 2, 10],
+] as const;
 
 const features = [
   {
@@ -112,8 +107,10 @@ const intelligenceCards = [
     title: "把桌面端接进 AI 工作流。",
     description:
       "仅监听本机的 HTTP MCP 服务，让 Codex、Claude Code、OpenClaw 等兼容客户端调用应用工具，复用桌面端登录态、下载目录和任务队列。",
+    image: "./images/mcp-call-result.png",
+    imageAlt: "AI 通过 MCP 完成关注、查询与下载任务的调用结果",
     icon: Network,
-    proof: "Local-only tools with risk hints",
+    proof: "A real MCP call: follow / inspect / message / archive",
     stats: ["本机连接", "工具风险标记", "写操作确认"],
   },
   {
@@ -210,6 +207,65 @@ function readInitialTheme(): Theme {
   const saved = window.localStorage.getItem("better-douyin-site-theme");
   if (saved === "dark" || saved === "light") return saved;
   return "dark";
+}
+
+function AmbientEffects() {
+  const reduceMotion = useReducedMotion();
+  const particlesRef = useRef<Array<HTMLSpanElement | null>>([]);
+
+  useEffect(() => {
+    if (reduceMotion || window.matchMedia("(pointer: coarse)").matches) return;
+
+    let frame = 0;
+    let latestX = window.innerWidth / 2;
+    let latestY = window.innerHeight / 2;
+
+    const render = () => {
+      frame = 0;
+      const offsetX = latestX / window.innerWidth - 0.5;
+      const offsetY = latestY / window.innerHeight - 0.5;
+      document.documentElement.style.setProperty("--cursor-x", `${latestX}px`);
+      document.documentElement.style.setProperty("--cursor-y", `${latestY}px`);
+      particlesRef.current.forEach((particle, index) => {
+        if (!particle) return;
+        const depth = 8 + (index % 5) * 4;
+        particle.style.transform = `translate3d(${offsetX * depth}px, ${offsetY * depth}px, 0)`;
+      });
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      latestX = event.clientX;
+      latestY = event.clientY;
+      if (!frame) frame = window.requestAnimationFrame(render);
+    };
+
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [reduceMotion]);
+
+  return (
+    <div className="ambient-effects" aria-hidden="true">
+      <span className="cursor-glow" />
+      <span className="cursor-glow cursor-glow-secondary" />
+      {ambientParticles.map(([x, y, size, opacity], index) => (
+        <span
+          className="ambient-particle"
+          key={`${x}-${y}`}
+          ref={(element) => { particlesRef.current[index] = element; }}
+          style={{
+            left: `${x}%`,
+            top: `${y}%`,
+            width: `${size}px`,
+            height: `${size}px`,
+            opacity: opacity / 100,
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 function Brand() {
@@ -373,26 +429,10 @@ function Hero() {
               </span>
             ))}
           </div>
+          <p className="hero-proof-note">GitHub 公开数据 · 2026.07.22 · 发行包下载不等同于独立用户数</p>
         </motion.div>
       </div>
     </section>
-  );
-}
-
-function Ticker() {
-  const items = [...tickerItems, ...tickerItems];
-
-  return (
-    <div className="ticker" aria-hidden="true">
-      <div className="ticker-track">
-        {items.map((item, index) => (
-          <span className="ticker-item" key={`${item}-${index}`}>
-            <i />
-            {item}
-          </span>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -405,7 +445,15 @@ function IntelligenceSection() {
           {intelligenceCards.map((card) => {
             const Icon = card.icon;
             return (
-              <Reveal className={card.featured ? "intelligence-card intelligence-card-featured" : "intelligence-card"} key={card.eyebrow}>
+              <Reveal
+                className={[
+                  "intelligence-card",
+                  card.featured && "intelligence-card-featured",
+                  card.eyebrow === "MCP" && "intelligence-card-proof",
+                  card.eyebrow === "AUTOMATION" && "intelligence-card-automation",
+                ].filter(Boolean).join(" ")}
+                key={card.eyebrow}
+              >
                 <div className="intelligence-head">
                   <span>{card.eyebrow}</span>
                   <Icon aria-hidden="true" />
@@ -440,22 +488,41 @@ function IntelligenceSection() {
             );
           })}
         </Reveal>
-        <div className="capability-grid">
-          {capabilityCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <Reveal className="capability-card" key={card.title}>
-                <div className="capability-card-top">
-                  <span>{card.code}</span>
-                  <Icon aria-hidden="true" />
-                </div>
-                <h4>{card.title}</h4>
-                <p>{card.description}</p>
-                <small>{card.signal}</small>
-              </Reveal>
-            );
-          })}
-        </div>
+        <Reveal className="feature-matrix">
+          <div className="feature-matrix-heading">
+            <span>Capability index</span>
+            <p>把常用动作收在一个清晰、可扫读的功能清单里。</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">功能</th>
+                <th scope="col">工作方式</th>
+                <th scope="col">能力标签</th>
+              </tr>
+            </thead>
+            <tbody>
+              {capabilityCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <tr key={card.title}>
+                    <td>
+                      <span className="matrix-feature-name">
+                        <Icon aria-hidden="true" />
+                        <span>
+                          <small>{card.code}</small>
+                          <strong>{card.title}</strong>
+                        </span>
+                      </span>
+                    </td>
+                    <td>{card.description}</td>
+                    <td><span className="matrix-signal">{card.signal}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </Reveal>
       </div>
     </section>
   );
@@ -574,10 +641,10 @@ export default function App() {
 
   return (
     <>
+      <AmbientEffects />
       <Header theme={theme} onThemeToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")} />
       <main>
         <Hero />
-        <Ticker />
         <IntelligenceSection />
         <ExperienceSection />
         <ManifestoSection />
