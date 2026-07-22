@@ -100,6 +100,8 @@ const intelligenceCards = [
     title: "AI 聊天，让处理不只靠手点。",
     description:
       "兼容 OpenAI Compatible、DeepSeek、通义千问、硅基流动、火山/豆包等 Chat Completions 服务。系统提示词定义边界，用户提示词补充任务风格，评论、私信和推荐流处理都能被清晰约束。",
+    image: "./images/ai-chat.jpg",
+    imageAlt: "AI 智能互动与回复风格配置界面",
     icon: Bot,
     proof: "Prompt import / provider switch / safety scope",
     stats: ["多服务商", "提示词导入", "边界可控"],
@@ -410,6 +412,11 @@ function IntelligenceSection() {
                 </div>
                 <h3>{card.title}</h3>
                 <p>{card.description}</p>
+                {"image" in card && (
+                  <div className="intelligence-media">
+                    <img src={card.image} alt={card.imageAlt} />
+                  </div>
+                )}
                 <div className="intelligence-proof">{card.proof}</div>
                 <div className="chip-row">
                   {card.stats.map((stat) => <span key={stat}>{stat}</span>)}

@@ -820,6 +820,20 @@ small {
     linear-gradient(0deg, color-mix(in srgb, var(--surface) 94%, transparent), color-mix(in srgb, var(--surface-raised) 88%, transparent));
 }
 
+.intelligence-media {
+  margin: 18px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: var(--shadow-border);
+}
+
+.intelligence-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
 .intelligence-head {
   position: relative;
   z-index: 1;
