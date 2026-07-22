@@ -61,7 +61,7 @@ const features = [
     label: "ENTRY",
     title: "搜索和链接，是入口。",
     description: "按用户名、抖音号或分享链接进入内容线索。用户、作品、推荐流可以在一个桌面入口里开始整理。",
-    image: "/images/get-user.jpg",
+    image: "./images/get-user.jpg",
     imageAlt: "better-douyin 搜索用户界面",
     icon: Search,
   },
@@ -70,7 +70,7 @@ const features = [
     label: "PROFILE",
     title: "主页资产，一眼摊开。",
     description: "作品、收藏、点赞和用户资料集中展示。适合先判断内容价值，再决定是否批量归档。",
-    image: "/images/user-detail.jpg",
+    image: "./images/user-detail.jpg",
     imageAlt: "better-douyin 用户主页界面",
     icon: Archive,
   },
@@ -79,7 +79,7 @@ const features = [
     label: "DISCOVER",
     title: "在推荐流里保持节奏。",
     description: "熟悉的竖屏预览、连续切换和快速收藏，让你像浏览一样整理素材。看到好内容，马上加入本地归档线。",
-    image: "/images/recommend.jpg",
+    image: "./images/recommend.jpg",
     imageAlt: "better-douyin 推荐视频流界面",
     icon: Play,
   },
@@ -88,7 +88,7 @@ const features = [
     label: "PLAY",
     title: "归档之后，仍然好看。",
     description: "视频、图集、Live Photo、原声与 BGM 保持完整。进度、音量、自动连播都在手边，本地库也有沉浸观看体验。",
-    image: "/images/player.jpg",
+    image: "./images/player.jpg",
     imageAlt: "better-douyin 沉浸播放器界面",
     icon: Play,
   },
@@ -214,7 +214,7 @@ function Brand() {
   return (
     <a className="brand" href="#top" aria-label="better-douyin 首页">
       <span className="brand-mark">
-        <img src="/images/animated-icon.svg" alt="" />
+        <img src="./images/animated-icon.svg" alt="" />
       </span>
       <span>better-douyin</span>
     </a>
@@ -324,7 +324,7 @@ function Hero() {
   return (
     <section className="hero" id="top">
       <div className="hero-backdrop" aria-hidden="true">
-        <img src="/images/home-classic.jpg" alt="" />
+        <img src="./images/home-classic.jpg" alt="" />
       </div>
       <div className="hero-grid" aria-hidden="true" />
       <div className="hero-inner">
