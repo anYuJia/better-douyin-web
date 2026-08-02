@@ -22,6 +22,7 @@ import {
   RadioTower,
   Radar,
   Search,
+  ShieldCheck,
   Sparkles,
   Sun,
   WandSparkles,
@@ -39,9 +40,9 @@ const releases = {
 };
 
 const heroSignals = [
-  { label: "GitHub Stars · 双版本合计", value: "1.1K+" },
-  { label: "Forks", value: "146" },
-  { label: "Release downloads", value: "16K+" },
+  { label: "官方发行版", value: "完全免费" },
+  { label: "运行方式", value: "本地优先" },
+  { label: "工作流", value: "AI / MCP" },
 ];
 
 const ambientParticles = [
@@ -53,39 +54,57 @@ const ambientParticles = [
 const features = [
   {
     number: "01",
-    label: "ENTRY",
-    title: "搜索和链接，是入口。",
-    description: "按用户名、抖音号或分享链接进入内容线索。用户、作品、推荐流可以在一个桌面入口里开始整理。",
-    image: "./images/get-user.jpg",
-    imageAlt: "better-douyin 搜索用户界面",
+    label: "PROFILE",
+    title: "从用户主页开始整理内容。",
+    description: "搜索昵称、抖音号或 UID 后进入主页，作品、粉丝、关注、获赞和批量下载入口集中呈现。",
+    image: "./images/screen-user-detail.png",
+    imageAlt: "better-douyin 用户主页与作品列表界面",
     icon: Search,
   },
   {
     number: "02",
-    label: "PROFILE",
-    title: "主页资产，一眼摊开。",
-    description: "作品、收藏、点赞和用户资料集中展示。适合先判断内容价值，再决定是否批量归档。",
-    image: "./images/user-detail.jpg",
-    imageAlt: "better-douyin 用户主页界面",
+    label: "DISCOVER",
+    title: "推荐流里也能快速筛选。",
+    description: "精选 / 推荐切换、卡片预览、快速播放和一键下载，让刷到的内容直接进入归档流程。",
+    image: "./images/screen-recommended.png",
+    imageAlt: "better-douyin 推荐视频流界面",
     icon: Archive,
   },
   {
     number: "03",
-    label: "DISCOVER",
-    title: "在推荐流里保持节奏。",
-    description: "熟悉的竖屏预览、连续切换和快速收藏，让你像浏览一样整理素材。看到好内容，马上加入本地归档线。",
-    image: "./images/recommend.jpg",
-    imageAlt: "better-douyin 推荐视频流界面",
-    icon: Play,
+    label: "FILES",
+    title: "下载完成后，仍然好管理。",
+    description: "我的下载支持任务进度、本地文件扫描、作品视图、搜索、筛选、播放、定位和删除。",
+    image: "./images/screen-downloads.png",
+    imageAlt: "better-douyin 我的下载与本地文件界面",
+    icon: Download,
   },
   {
     number: "04",
     label: "PLAY",
-    title: "归档之后，仍然好看。",
-    description: "视频、图集、Live Photo、原声与 BGM 保持完整。进度、音量、自动连播都在手边，本地库也有沉浸观看体验。",
-    image: "./images/player.jpg",
+    title: "播放器是完整观看体验。",
+    description: "视频、图集、Live Photo、原声与 BGM 都能保留；进度、音量、倍速、清晰度和自动连播都在手边。",
+    image: "./images/screen-player.png",
     imageAlt: "better-douyin 沉浸播放器界面",
     icon: Play,
+  },
+  {
+    number: "05",
+    label: "NOTICE",
+    title: "互动通知可以统一处理。",
+    description: "点赞、评论、关注等通知集中展示，支持后台刷新、跳转来源内容和评论回复工作流。",
+    image: "./images/screen-notices.png",
+    imageAlt: "better-douyin 通知中心界面",
+    icon: Bell,
+  },
+  {
+    number: "06",
+    label: "FRIENDS",
+    title: "好友和私信不再散落。",
+    description: "好友列表、在线状态、私信会话、历史同步、未读提醒和分享卡片展示组合成桌面工作台。",
+    image: "./images/screen-friends.png",
+    imageAlt: "better-douyin 好友与私信界面",
+    icon: MessageCircle,
   },
 ];
 
@@ -117,17 +136,19 @@ const intelligenceCards = [
     eyebrow: "AUTOMATION",
     title: "让后台持续观察。",
     description:
-      "推荐流、好友私信和通知回复可以进入自动监控流程。你决定规则、动作和上限，应用负责持续观察并记录触发日志。",
+      "推荐流、好友私信、通知、评论区和创作者作品更新可以进入自动监控流程。你决定规则、动作和上限，应用负责持续观察并记录触发日志。",
+    image: "./images/screen-automation.png",
+    imageAlt: "better-douyin 自动监控设置界面",
     icon: RadioTower,
-    proof: "Rules / logs / monitoring limits",
-    stats: ["推荐流", "好友私信", "通知回复"],
+    proof: "Rules / logs / thresholds / limits",
+    stats: ["推荐流", "好友私信", "创作者监控"],
   },
 ];
 
 const flowSteps = [
   { icon: MousePointer2, label: "发现", text: "搜索主页、推荐流、分享链接进入同一条线。" },
-  { icon: BrainCircuit, label: "判断", text: "AI 根据提示词辅助筛选、回复或整理动作。" },
-  { icon: CircuitBoard, label: "调用", text: "MCP 客户端发起本机工具调用，应用侧确认风险。" },
+  { icon: BrainCircuit, label: "判断", text: "AI 根据提示词辅助筛选、评论、私信或整理动作。" },
+  { icon: CircuitBoard, label: "确认", text: "写操作默认可控，敏感动作需要明确开启或确认。" },
   { icon: Database, label: "归档", text: "下载、历史、配置和本地文件回到你的电脑。" },
 ];
 
@@ -137,7 +158,7 @@ const capabilityCards = [
     code: "A / ARCHIVE",
     signal: "Queue ready",
     title: "批量归档",
-    description: "用户作品、搜索结果、推荐流、收藏和点赞列表都能进入下载队列。",
+    description: "用户作品、搜索结果、推荐流、收藏、点赞和合集内容都能进入下载队列。",
   },
   {
     icon: Workflow,
@@ -151,14 +172,14 @@ const capabilityCards = [
     code: "C / DM",
     signal: "Draft + reply",
     title: "好友私信",
-    description: "好友列表、消息记录与自动回复组合成桌面工作流。",
+    description: "好友列表、在线状态、消息记录、分享卡片与自动回复组合成桌面工作流。",
   },
   {
     icon: Bell,
     code: "D / NOTICE",
     signal: "AI assisted",
     title: "通知处理",
-    description: "评论、回复和互动通知可以统一查看，并交给 AI 规则辅助处理。",
+    description: "点赞、评论、关注等互动通知可以统一查看，并交给 AI 规则辅助处理。",
   },
   {
     icon: Play,
@@ -173,6 +194,24 @@ const capabilityCards = [
     signal: "Private by default",
     title: "本地优先",
     description: "Cookie、配置、下载历史和本地文件保存在本机。",
+  },
+];
+
+const trustCards = [
+  {
+    icon: ShieldCheck,
+    title: "官方发行版完全免费",
+    text: "不存在官方付费版、激活码、会员解锁或收费代下服务。遇到售卖安装包、激活码、托管服务的，都不是官方授权。",
+  },
+  {
+    icon: LockKeyhole,
+    title: "本地优先保存",
+    text: "Cookie、账号、配置、下载历史、缓存和本地文件保存在本机；AI / MCP 也默认围绕本机应用运行。",
+  },
+  {
+    icon: Check,
+    title: "非商业使用边界",
+    text: "项目仅允许个人在合法、授权、非商业的学习、研究和测试场景中使用，禁止收费分发、SaaS、数据销售和账号营销获客。",
   },
 ];
 
@@ -297,6 +336,7 @@ function Header({ theme, onThemeToggle }: { theme: Theme; onThemeToggle: () => v
       <nav className="desktop-nav" aria-label="主导航">
         <a href="#intelligence">AI / MCP</a>
         <a href="#experience">体验</a>
+        <a href="#trust">免费声明</a>
         <a href="#download">版本 / 下载</a>
         <a className="nav-github" href={releases.classicSource} target="_blank" rel="noreferrer">
           <Github aria-hidden="true" />
@@ -332,6 +372,7 @@ function Header({ theme, onThemeToggle }: { theme: Theme; onThemeToggle: () => v
           >
             <a href="#intelligence" onClick={closeMenu}>AI / MCP</a>
             <a href="#experience" onClick={closeMenu}>体验</a>
+            <a href="#trust" onClick={closeMenu}>免费声明</a>
             <a href="#download" onClick={closeMenu}>版本 / 下载</a>
             <a href={releases.classicSource} target="_blank" rel="noreferrer">GitHub</a>
           </motion.nav>
@@ -382,7 +423,22 @@ function Hero() {
   return (
     <section className="hero" id="top">
       <div className="hero-backdrop" aria-hidden="true">
-        <img src="./images/home-classic.jpg" alt="" />
+        <img
+          className="hero-backdrop-image hero-backdrop-image-dark"
+          src="./images/hero-workspace-dark.jpg"
+          alt=""
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+        />
+        <img
+          className="hero-backdrop-image hero-backdrop-image-light"
+          src="./images/hero-workspace-light.jpg"
+          alt=""
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+        />
       </div>
       <div className="hero-grid" aria-hidden="true" />
       <div className="hero-inner">
@@ -394,7 +450,7 @@ function Hero() {
         >
           <span className="hero-eyebrow">
             <Radar aria-hidden="true" />
-            Content archive suite
+            Official local media workspace
           </span>
           <h1 aria-label="better-douyin">
             <span>better</span>
@@ -408,16 +464,16 @@ function Hero() {
           transition={{ duration: 0.68, delay: 0.1, ease: [0.2, 0, 0, 1] }}
         >
           <p className="hero-tagline">
-            <strong>给内容收藏战士的桌面武器库。</strong>
-            <span>搜索、预览、批量归档，再把 AI 聊天与 MCP 工具接入本地工作流。不是控制台，是一张让人想下载的产品战报。</span>
+            <strong>完全免费的本地媒体工作台。</strong>
+            <span>搜索、预览、批量归档，再把通知、好友私信、自动监控、AI 互动和 MCP 工具接进同一个桌面应用。</span>
           </p>
           <div className="hero-actions">
             <ActionLink href="#download" primary>
-              下载最新版
+              下载官方发行版
               <ArrowDown aria-hidden="true" />
             </ActionLink>
-            <ActionLink href="#intelligence">
-              看 AI / MCP
+            <ActionLink href="#trust">
+              免费与安全边界
               <ArrowRight aria-hidden="true" />
             </ActionLink>
           </div>
@@ -429,8 +485,39 @@ function Hero() {
               </span>
             ))}
           </div>
-          <p className="hero-proof-note">GitHub 公开数据 · 2026.07.22 · 发行包下载不等同于独立用户数</p>
+          <p className="hero-proof-note">请从 GitHub Releases 下载官方发行版；Release 附带 checksums 可核对安装包完整性。</p>
         </motion.div>
+      </div>
+    </section>
+  );
+}
+
+function TrustSection() {
+  return (
+    <section className="trust-section" id="trust">
+      <div className="section-inner trust-inner">
+        <Reveal className="trust-copy">
+          <span className="section-kicker">
+            <ShieldCheck aria-hidden="true" />
+            Free and official
+          </span>
+          <h2>官方版本免费，<span>也有清楚的使用边界。</span></h2>
+          <p>
+            better-douyin 和 better-douyin-R 的官方发行版均免费提供。请关注作者和 GitHub 官方仓库，不要从第三方收费渠道购买安装包、激活码或所谓会员版。
+          </p>
+        </Reveal>
+        <div className="trust-card-grid">
+          {trustCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Reveal className="trust-card" key={card.title}>
+                <Icon aria-hidden="true" />
+                <h3>{card.title}</h3>
+                <p>{card.text}</p>
+              </Reveal>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
@@ -562,7 +649,7 @@ function ManifestoSection() {
       <Reveal className="manifesto-inner">
         <p>
           信息流让内容快速经过，<span>better-douyin 让它停下来。</span>
-          从一次观看，变成可检索、可管理、可再次抵达的本地记忆。
+          从一次观看，变成可检索、可管理、可再次抵达的本地资料库。
         </p>
       </Reveal>
     </section>
@@ -577,8 +664,8 @@ function DownloadSection() {
           <WandSparkles aria-hidden="true" />
           Choose your build
         </span>
-        <h2>最后一步，<span>选择你的版本。</span></h2>
-        <p>两个版本做同一件事：把喜欢的内容真正留在本地。区别在于完整度、速度和运行时偏好。</p>
+        <h2>选择版本，<span>从官方渠道下载。</span></h2>
+        <p>两个版本都免费。Python 版偏完整与可改造，Rust / Tauri 版偏轻量和桌面体验；普通用户优先选择 Rust / Tauri 版。</p>
         <div className="version-choice-grid" id="versions">
           {versions.map((version) => (
             <article className="version-choice-card" key={version.name}>
@@ -610,7 +697,7 @@ function DownloadSection() {
             </article>
           ))}
         </div>
-        <small>请只在合法、授权、非商业的场景中使用。</small>
+        <small>请只在合法、授权、非商业的场景中使用。任何收费倒卖、代下载、托管服务或商业分发均非官方授权。</small>
       </Reveal>
     </section>
   );
@@ -620,7 +707,7 @@ function Footer() {
   return (
     <footer className="site-footer">
       <Brand />
-      <p>Local first. Built with care.</p>
+      <p>Official builds are free. Local first. Built with care.</p>
       <div>
         <a href={releases.classicSource} target="_blank" rel="noreferrer">Python</a>
         <a href={releases.rustSource} target="_blank" rel="noreferrer">Rust</a>
@@ -645,6 +732,7 @@ export default function App() {
       <Header theme={theme} onThemeToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")} />
       <main>
         <Hero />
+        <TrustSection />
         <IntelligenceSection />
         <ExperienceSection />
         <ManifestoSection />
