@@ -2229,3 +2229,30 @@ body::before {
     display: none;
   }
 }
+
+::view-transition-old(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+  mix-blend-mode: normal;
+  animation: theme-circle-in 0.6s cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes theme-circle-in {
+  from {
+    clip-path: circle(0% at var(--vt-origin-x, 100%) var(--vt-origin-y, 0%));
+  }
+  to {
+    clip-path: circle(150% at var(--vt-origin-x, 100%) var(--vt-origin-y, 0%));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
