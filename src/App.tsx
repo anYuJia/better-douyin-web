@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Archive,
@@ -31,6 +31,24 @@ import {
 } from "lucide-react";
 
 type Theme = "dark" | "light";
+
+const EASE: [number, number, number, number] = [0.2, 0, 0, 1];
+
+const revealInitial = { opacity: 0, y: 22 };
+const revealInView = { opacity: 1, y: 0 };
+const revealTransition = { duration: 0.56, ease: EASE };
+
+const themeBackgrounds: Record<Theme, string> = {
+  dark: "#080806",
+  light: "#f7f7f4",
+};
+
+function applyTheme(next: Theme) {
+  document.documentElement.dataset.theme = next;
+  document.documentElement.style.colorScheme = next;
+  window.localStorage.setItem("better-douyin-site-theme", next);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeBackgrounds[next]);
+}
 
 const releases = {
   classic: "https://github.com/anYuJia/better-douyin/releases/latest",
@@ -252,6 +270,13 @@ function AmbientEffects() {
   const reduceMotion = useReducedMotion();
   const particlesRef = useRef<Array<HTMLSpanElement | null>>([]);
 
+  const setParticleRef = useCallback(
+    (index: number) => (element: HTMLSpanElement | null) => {
+      particlesRef.current[index] = element;
+    },
+    [],
+  );
+
   useEffect(() => {
     if (reduceMotion || window.matchMedia("(pointer: coarse)").matches) return;
 
@@ -293,7 +318,7 @@ function AmbientEffects() {
         <span
           className="ambient-particle"
           key={`${x}-${y}`}
-          ref={(element) => { particlesRef.current[index] = element; }}
+          ref={setParticleRef(index)}
           style={{
             left: `${x}%`,
             top: `${y}%`,
@@ -326,12 +351,32 @@ function IconButton({ label, children, onClick }: { label: string; children: Rea
   );
 }
 
-function Header({ theme, onThemeToggle }: { theme: Theme; onThemeToggle: (event: ReactMouseEvent<HTMLButtonElement>) => void }) {
+function Header({ theme, onThemeToggle }: { theme: Theme; onThemeToggle: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
   const closeMenu = () => setMenuOpen(false);
 
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      header.classList.toggle("is-scrolled", window.scrollY > 8);
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
   return (
-    <header className="site-header">
+    <header className="site-header" ref={headerRef}>
       <Brand />
       <nav className="desktop-nav" aria-label="主导航">
         <a href="#intelligence">AI / MCP</a>
@@ -365,10 +410,10 @@ function Header({ theme, onThemeToggle }: { theme: Theme; onThemeToggle: (event:
           <motion.nav
             className="mobile-nav"
             aria-label="移动端导航"
-            initial={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -8, filter: "blur(4px)" }}
-            transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: EASE }}
           >
             <a href="#intelligence" onClick={closeMenu}>AI / MCP</a>
             <a href="#experience" onClick={closeMenu}>体验</a>
@@ -395,10 +440,10 @@ function Reveal({ children, className = "" }: { children: ReactNode; className?:
   return (
     <motion.div
       className={className}
-      initial={reduceMotion ? false : { opacity: 0, y: 22, filter: "blur(3px)" }}
-      whileInView={reduceMotion ? undefined : { opacity: 1, y: 0, filter: "blur(0px)" }}
+      initial={reduceMotion ? false : revealInitial}
+      whileInView={reduceMotion ? undefined : revealInView}
       viewport={{ once: true, amount: 0.12 }}
-      transition={{ duration: 0.56, ease: [0.2, 0, 0, 1] }}
+      transition={revealTransition}
     >
       {children}
     </motion.div>
@@ -417,36 +462,60 @@ function SectionLead({ kicker, title, muted }: { kicker: string; title: string; 
   );
 }
 
-function Hero() {
+function HeroBackdropImage({ src, className, active }: { src: string; className: string; active: boolean }) {
+  return (
+    <img
+      className={className}
+      src={active ? src : undefined}
+      alt=""
+      loading="eager"
+      decoding="async"
+      fetchPriority={active ? "high" : "low"}
+      onError={(event) => {
+        (event.currentTarget as HTMLImageElement).style.display = "none";
+      }}
+    />
+  );
+}
+
+function Hero({ theme }: { theme: Theme }) {
   const reduceMotion = useReducedMotion();
+  const heroRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const hero = heroRef.current;
+    if (!hero || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      document.documentElement.style.setProperty(
+        "--hero-anim-play",
+        entries[0].isIntersecting ? "running" : "paused",
+      );
+    });
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <section className="hero" id="top">
+    <section className="hero" id="top" ref={heroRef}>
       <div className="hero-backdrop" aria-hidden="true">
-        <img
+        <HeroBackdropImage
           className="hero-backdrop-image hero-backdrop-image-dark"
           src="./images/hero-workspace-dark.jpg"
-          alt=""
-          loading="eager"
-          decoding="async"
-          fetchPriority="high"
+          active={theme === "dark"}
         />
-        <img
+        <HeroBackdropImage
           className="hero-backdrop-image hero-backdrop-image-light"
           src="./images/hero-workspace-light.jpg"
-          alt=""
-          loading="eager"
-          decoding="async"
-          fetchPriority="high"
+          active={theme === "light"}
         />
       </div>
       <div className="hero-grid" aria-hidden="true" />
       <div className="hero-inner">
         <motion.div
           className="hero-copy"
-          initial={reduceMotion ? false : { opacity: 0, y: 18, filter: "blur(4px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ duration: 0.68, ease: [0.2, 0, 0, 1] }}
+          initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.68, ease: EASE }}
         >
           <span className="hero-eyebrow">
             <Radar aria-hidden="true" />
@@ -459,9 +528,9 @@ function Hero() {
         </motion.div>
         <motion.div
           className="hero-side"
-          initial={reduceMotion ? false : { opacity: 0, y: 22, filter: "blur(4px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ duration: 0.68, delay: 0.1, ease: [0.2, 0, 0, 1] }}
+          initial={reduceMotion ? false : { opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.68, delay: 0.1, ease: EASE }}
         >
           <p className="hero-tagline">
             <strong>完全免费的本地媒体工作台。</strong>
@@ -549,7 +618,7 @@ function IntelligenceSection() {
                 <p>{card.description}</p>
                 {"image" in card && (
                   <div className="intelligence-media">
-                    <img src={card.image} alt={card.imageAlt} />
+                    <img src={card.image} alt={card.imageAlt} loading="lazy" decoding="async" />
                   </div>
                 )}
                 <div className="intelligence-proof">{card.proof}</div>
@@ -632,7 +701,7 @@ function ExperienceSection() {
                   <p>{feature.description}</p>
                 </Reveal>
                 <Reveal className="feature-media">
-                  <img src={feature.image} alt={feature.imageAlt} loading={index === 0 ? "eager" : "lazy"} />
+                  <img src={feature.image} alt={feature.imageAlt} loading={index === 0 ? "eager" : "lazy"} decoding="async" />
                 </Reveal>
               </article>
             );
@@ -716,59 +785,73 @@ function Footer() {
   );
 }
 
+const MemoAmbientEffects = memo(AmbientEffects);
+const MemoHeader = memo(Header);
+const MemoHero = memo(Hero);
+const MemoTrustSection = memo(TrustSection);
+const MemoIntelligenceSection = memo(IntelligenceSection);
+const MemoExperienceSection = memo(ExperienceSection);
+const MemoManifestoSection = memo(ManifestoSection);
+const MemoDownloadSection = memo(DownloadSection);
+const MemoFooter = memo(Footer);
+
 export default function App() {
   const [theme, setTheme] = useState<Theme>(readInitialTheme);
+  const flashRef = useRef<HTMLDivElement>(null);
+  const flashingRef = useRef(false);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
-    window.localStorage.setItem("better-douyin-site-theme", theme);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#080806" : "#f7f7f4");
+    applyTheme(theme);
   }, [theme]);
 
-  const toggleTheme = (event: ReactMouseEvent<HTMLButtonElement>) => {
+  const toggleTheme = useCallback(() => {
     const next: Theme = theme === "dark" ? "light" : "dark";
-    const apply = () => {
-      document.documentElement.dataset.theme = next;
-      document.documentElement.style.colorScheme = next;
-      window.localStorage.setItem("better-douyin-site-theme", next);
-      document.querySelector('meta[name="theme-color"]')?.setAttribute(
-        "content",
-        next === "dark" ? "#080806" : "#f7f7f4",
-      );
+    const commit = () => {
+      applyTheme(next);
+      setTheme(next);
     };
-    const doc = document as Document & {
-      startViewTransition?: (callback: () => void) => { finished: Promise<void> };
-    };
-    document.documentElement.style.setProperty(
-      "--vt-origin-x",
-      `${Math.round(event.clientX)}px`,
-    );
-    document.documentElement.style.setProperty(
-      "--vt-origin-y",
-      `${Math.round(event.clientY)}px`,
-    );
-    if (doc.startViewTransition) {
-      doc.startViewTransition(apply);
-    } else {
-      apply();
+    const flash = flashRef.current;
+    const reduceMotion =
+      typeof window.matchMedia === "function"
+        && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!flash || reduceMotion || flashingRef.current) {
+      commit();
+      return;
     }
-    setTheme(next);
-  };
+
+    flashingRef.current = true;
+    flash.style.transition = "none";
+    flash.style.backgroundColor = themeBackgrounds[next];
+    flash.style.opacity = "0";
+    window.requestAnimationFrame(() => {
+      flash.style.transition = "opacity 130ms ease";
+      flash.style.opacity = "1";
+    });
+    window.setTimeout(() => {
+      commit();
+      flash.style.transition = "opacity 220ms ease";
+      flash.style.opacity = "0";
+    }, 150);
+    window.setTimeout(() => {
+      flashingRef.current = false;
+    }, 420);
+  }, [theme]);
 
   return (
     <>
-      <AmbientEffects />
-      <Header theme={theme} onThemeToggle={toggleTheme} />
+      <div className="theme-flash" ref={flashRef} aria-hidden="true" />
+      <MemoAmbientEffects />
+      <MemoHeader theme={theme} onThemeToggle={toggleTheme} />
       <main>
-        <Hero />
-        <TrustSection />
-        <IntelligenceSection />
-        <ExperienceSection />
-        <ManifestoSection />
-        <DownloadSection />
+        <MemoHero theme={theme} />
+        <MemoTrustSection />
+        <MemoIntelligenceSection />
+        <MemoExperienceSection />
+        <MemoManifestoSection />
+        <MemoDownloadSection />
       </main>
-      <Footer />
+      <MemoFooter />
     </>
   );
 }

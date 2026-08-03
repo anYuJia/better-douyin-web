@@ -100,22 +100,21 @@ body::before {
   position: absolute;
   inset: -20%;
   background:
-    radial-gradient(circle at 14% 22%, color-mix(in srgb, var(--cyan) 11%, transparent), transparent 23%),
-    radial-gradient(circle at 84% 16%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 25%),
-    radial-gradient(circle at 56% 86%, color-mix(in srgb, var(--gold) 7%, transparent), transparent 27%);
-  filter: blur(30px);
+    radial-gradient(circle at 14% 22%, color-mix(in srgb, var(--cyan) 11%, transparent) 0%, transparent 46%),
+    radial-gradient(circle at 84% 16%, color-mix(in srgb, var(--accent) 9%, transparent) 0%, transparent 50%),
+    radial-gradient(circle at 56% 86%, color-mix(in srgb, var(--gold) 7%, transparent) 0%, transparent 56%);
 }
 
 .cursor-glow {
   position: absolute;
-  left: var(--cursor-x, 50vw);
-  top: var(--cursor-y, 30vh);
+  left: 0;
+  top: 0;
   width: 520px;
   height: 520px;
   border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--cyan) 10%, transparent), transparent 68%);
-  filter: blur(12px);
-  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--cyan) 11%, transparent), transparent 62%);
+  transform: translate3d(var(--cursor-x, 50vw), var(--cursor-y, 30vh), 0) translate(-50%, -50%);
+  will-change: transform;
 }
 
 .cursor-glow-secondary {
@@ -194,6 +193,14 @@ small {
   border-bottom: 1px solid var(--border-soft);
   background: color-mix(in srgb, var(--background) 82%, transparent);
   backdrop-filter: blur(22px) saturate(140%);
+  transition-property: background-color;
+  transition-duration: 220ms;
+  transition-timing-function: ease;
+}
+
+.site-header.is-scrolled {
+  background: color-mix(in srgb, var(--background) 93%, transparent);
+  backdrop-filter: none;
 }
 
 .brand {
@@ -325,16 +332,14 @@ small {
   position: absolute;
   inset: 0;
   opacity: 0;
-  filter: blur(4px);
   transform: scale(0.25);
-  transition-property: opacity, filter, transform;
+  transition-property: opacity, transform;
   transition-duration: 260ms;
   transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
 .theme-icon-stack .theme-icon-active {
   opacity: 1;
-  filter: blur(0);
   transform: scale(1);
 }
 
@@ -479,6 +484,7 @@ small {
   -webkit-background-clip: text;
   background-clip: text;
   animation: spectrum 8s linear infinite;
+  animation-play-state: var(--hero-anim-play, running);
 }
 
 @keyframes spectrum {
@@ -598,55 +604,6 @@ small {
   color: var(--text-muted);
   font-size: 0.61rem;
   line-height: 1.55;
-}
-
-.ticker {
-  overflow: hidden;
-  border-bottom: 1px solid var(--border-soft);
-  background: color-mix(in srgb, var(--background) 76%, transparent);
-  backdrop-filter: blur(14px);
-}
-
-.ticker-track {
-  width: max-content;
-  display: flex;
-  animation: marquee 28s linear infinite;
-}
-
-.ticker-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 24px;
-  padding: 18px 26px;
-  color: var(--text-muted);
-  font-size: 0.68rem;
-  font-weight: 820;
-  white-space: nowrap;
-  text-transform: uppercase;
-}
-
-.ticker-item i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 18px var(--accent);
-}
-
-.ticker-item:nth-child(2n) i {
-  background: var(--cyan);
-  box-shadow: 0 0 18px var(--cyan);
-}
-
-.ticker-item:nth-child(3n) i {
-  background: var(--gold);
-  box-shadow: 0 0 18px var(--gold);
-}
-
-@keyframes marquee {
-  to {
-    transform: translateX(-50%);
-  }
 }
 
 .section {
@@ -1882,9 +1839,8 @@ body::before {
     display: grid;
     padding: 8px;
     border-radius: 8px;
-    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    background: color-mix(in srgb, var(--surface) 97%, transparent);
     box-shadow: var(--shadow-border-hover);
-    backdrop-filter: blur(20px);
   }
 
   .mobile-nav a {
@@ -2230,29 +2186,11 @@ body::before {
   }
 }
 
-::view-transition-old(root) {
-  animation: none;
-  mix-blend-mode: normal;
-}
-
-::view-transition-new(root) {
-  z-index: 9999;
-  mix-blend-mode: normal;
-  animation: theme-circle-in 0.6s cubic-bezier(0.2, 0, 0, 1);
-}
-
-@keyframes theme-circle-in {
-  from {
-    clip-path: circle(0% at var(--vt-origin-x, 100%) var(--vt-origin-y, 0%));
-  }
-  to {
-    clip-path: circle(150% at var(--vt-origin-x, 100%) var(--vt-origin-y, 0%));
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation: none !important;
-  }
+.theme-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background: var(--background);
+  opacity: 0;
 }
