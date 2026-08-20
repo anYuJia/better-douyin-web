@@ -593,6 +593,25 @@ export const DOC_CONTENT: Record<string, DocEntry> = {
             },
           ]}
         />
+        <h3>仍然无法打开：移除下载隔离标记</h3>
+        <p>
+          如果已经从官方 Release 下载并完成 checksum 校验，但 macOS
+          仍提示“无法验证开发者”或应用没有反应，可以先在 Finder
+          中右键应用选择“打开”。如果仍被拦截，再在终端对这个明确的应用路径执行下面两行命令：
+        </p>
+        <CodeBlock label="Terminal">{`sudo xattr -r -d com.apple.quarantine "/Applications/better-douyin.app"
+open "/Applications/better-douyin.app"`}</CodeBlock>
+        <p>
+          执行第一行时系统会要求输入你的 macOS
+          登录密码；终端不会回显密码字符，输入完成后直接按回车即可。
+        </p>
+        <Callout kind="warning" title="只处理已核对的官方应用">
+          <p>
+            如果你把应用放在其他目录，请替换命令中的路径。不要对整个磁盘使用
+            <code>xattr</code>，也不要用“关闭
+            Gatekeeper”之类的方法绕过系统防护。
+          </p>
+        </Callout>
         <Callout title="macOS Intel 与 Linux">
           <p>
             当前 Release 列表没有 macOS x64/Intel 或 Linux 安装包。不要把 arm64
@@ -2786,6 +2805,23 @@ export const DOC_CONTENT: Record<string, DocEntry> = {
           <p>
             普通用户优先安装器或
             DMG。便携版适合希望手动管理目录的用户，必须完整解压后运行。
+          </p>
+        </details>
+        <details>
+          <summary>
+            macOS 提示无法验证开发者怎么办？
+            <ArrowRight />
+          </summary>
+          <p>
+            先确认下载的是官方 Release，并完成同版本的 SHA-256 校验。然后在
+            Finder 中右键应用选择“打开”；如果仍被拦截，可以只对已核对的应用移除
+            quarantine 标记：
+          </p>
+          <CodeBlock label="Terminal">{`sudo xattr -r -d com.apple.quarantine "/Applications/better-douyin.app"
+open "/Applications/better-douyin.app"`}</CodeBlock>
+          <p>
+            应用不在“应用程序”目录时替换路径，不要关闭
+            Gatekeeper，也不要对未知来源的文件执行这条命令。
           </p>
         </details>
         <details>
