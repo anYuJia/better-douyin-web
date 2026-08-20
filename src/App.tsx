@@ -1,857 +1,883 @@
-import { memo, useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
-  Archive,
-  ArrowDown,
   ArrowRight,
-  Bell,
+  BookOpen,
   Bot,
-  BrainCircuit,
   Check,
-  CircuitBoard,
-  Database,
+  ChevronRight,
+  Clipboard,
   Download,
+  ExternalLink,
   Github,
-  LockKeyhole,
+  HardDrive,
   Menu,
   MessageCircle,
   Moon,
-  MousePointer2,
   Network,
   Play,
   RadioTower,
-  Radar,
   Search,
   ShieldCheck,
   Sparkles,
   Sun,
-  WandSparkles,
-  Workflow,
   X,
+  Zap,
 } from "lucide-react";
 
+const REPO = "https://github.com/anYuJia/better-douyin";
+const RELEASES = `${REPO}/releases/latest`;
 type Theme = "dark" | "light";
-
-const EASE: [number, number, number, number] = [0.2, 0, 0, 1];
-
-const revealInitial = { opacity: 0, y: 22 };
-const revealInView = { opacity: 1, y: 0 };
-const revealTransition = { duration: 0.56, ease: EASE };
-
-const themeBackgrounds: Record<Theme, string> = {
-  dark: "#080806",
-  light: "#f7f7f4",
+const route = () => {
+  const value = location.hash.replace(/^#\/?/, "");
+  return value.startsWith("docs")
+    ? { page: "docs", section: value.split("/")[1] || "intro" }
+    : { page: "home", section: "" };
+};
+const go = (path: string) => {
+  location.hash = path;
+  scrollTo({ top: 0, behavior: "instant" });
 };
 
-function applyTheme(next: Theme) {
-  document.documentElement.dataset.theme = next;
-  document.documentElement.style.colorScheme = next;
-  window.localStorage.setItem("better-douyin-site-theme", next);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeBackgrounds[next]);
-}
-
-const releases = {
-  classic: "https://github.com/anYuJia/better-douyin/releases/latest",
-  rust: "https://github.com/anYuJia/better-douyin-R/releases/latest",
-  classicSource: "https://github.com/anYuJia/better-douyin",
-  rustSource: "https://github.com/anYuJia/better-douyin-R",
-};
-
-const heroSignals = [
-  { label: "官方发行版", value: "完全免费" },
-  { label: "运行方式", value: "本地优先" },
-  { label: "工作流", value: "AI / MCP" },
-];
-
-const ambientParticles = [
-  [7, 18, 3, 16], [14, 72, 2, 10], [23, 36, 2, 18], [31, 87, 3, 12],
-  [42, 14, 2, 20], [49, 61, 3, 14], [58, 28, 2, 17], [66, 83, 2, 11],
-  [73, 46, 3, 19], [81, 17, 2, 13], [88, 67, 3, 16], [94, 38, 2, 10],
+const pages = [
+  ["intro", "文档首页", "开始"],
+  ["install", "安装", "开始"],
+  ["first-run", "首次使用", "开始"],
+  ["download", "下载与管理", "使用指南"],
+  ["player", "播放器", "使用指南"],
+  ["messages", "通知与私信", "使用指南"],
+  ["ai", "AI 配置", "进阶能力"],
+  ["mcp", "MCP", "进阶能力"],
+  ["automation", "自动化", "进阶能力"],
+  ["privacy", "隐私与安全", "帮助"],
+  ["troubleshooting", "故障排查", "帮助"],
+  ["faq", "常见问题", "帮助"],
 ] as const;
-
-const features = [
-  {
-    number: "01",
-    label: "PROFILE",
-    title: "从用户主页开始整理内容。",
-    description: "搜索昵称、抖音号或 UID 后进入主页，作品、粉丝、关注、获赞和批量下载入口集中呈现。",
-    image: "./images/screen-user-detail.png",
-    imageAlt: "better-douyin 用户主页与作品列表界面",
-    icon: Search,
-  },
-  {
-    number: "02",
-    label: "DISCOVER",
-    title: "推荐流里也能快速筛选。",
-    description: "精选 / 推荐切换、卡片预览、快速播放和一键下载，让刷到的内容直接进入归档流程。",
-    image: "./images/screen-recommended.png",
-    imageAlt: "better-douyin 推荐视频流界面",
-    icon: Archive,
-  },
-  {
-    number: "03",
-    label: "FILES",
-    title: "下载完成后，仍然好管理。",
-    description: "我的下载支持任务进度、本地文件扫描、作品视图、搜索、筛选、播放、定位和删除。",
-    image: "./images/screen-downloads.png",
-    imageAlt: "better-douyin 我的下载与本地文件界面",
-    icon: Download,
-  },
-  {
-    number: "04",
-    label: "PLAY",
-    title: "播放器是完整观看体验。",
-    description: "视频、图集、Live Photo、原声与 BGM 都能保留；进度、音量、倍速、清晰度和自动连播都在手边。",
-    image: "./images/screen-player.png",
-    imageAlt: "better-douyin 沉浸播放器界面",
-    icon: Play,
-  },
-  {
-    number: "05",
-    label: "NOTICE",
-    title: "互动通知可以统一处理。",
-    description: "点赞、评论、关注等通知集中展示，支持后台刷新、跳转来源内容和评论回复工作流。",
-    image: "./images/screen-notices.png",
-    imageAlt: "better-douyin 通知中心界面",
-    icon: Bell,
-  },
-  {
-    number: "06",
-    label: "FRIENDS",
-    title: "好友和私信不再散落。",
-    description: "好友列表、在线状态、私信会话、历史同步、未读提醒和分享卡片展示组合成桌面工作台。",
-    image: "./images/screen-friends.png",
-    imageAlt: "better-douyin 好友与私信界面",
-    icon: MessageCircle,
-  },
-];
-
-const intelligenceCards = [
-  {
-    eyebrow: "AI CHAT",
-    title: "AI 聊天，让处理不只靠手点。",
-    description:
-      "兼容 OpenAI Compatible、DeepSeek、通义千问、硅基流动、火山/豆包等 Chat Completions 服务。系统提示词定义边界，用户提示词补充任务风格，评论、私信和推荐流处理都能被清晰约束。",
-    image: "./images/ai-chat.jpg",
-    imageAlt: "AI 智能互动与回复风格配置界面",
-    icon: Bot,
-    proof: "Prompt import / provider switch / safety scope",
-    stats: ["多服务商", "提示词导入", "边界可控"],
-    featured: true,
-  },
-  {
-    eyebrow: "MCP",
-    title: "把桌面端接进 AI 工作流。",
-    description:
-      "仅监听本机的 HTTP MCP 服务，让 Codex、Claude Code、OpenClaw 等兼容客户端调用应用工具，复用桌面端登录态、下载目录和任务队列。",
-    image: "./images/mcp-call-result.png",
-    imageAlt: "AI 通过 MCP 完成关注、查询与下载任务的调用结果",
-    icon: Network,
-    proof: "A real MCP call: follow / inspect / message / archive",
-    stats: ["本机连接", "工具风险标记", "写操作确认"],
-  },
-  {
-    eyebrow: "AUTOMATION",
-    title: "让后台持续观察。",
-    description:
-      "推荐流、好友私信、通知、评论区和创作者作品更新可以进入自动监控流程。你决定规则、动作和上限，应用负责持续观察并记录触发日志。",
-    image: "./images/screen-automation.png",
-    imageAlt: "better-douyin 自动监控设置界面",
-    icon: RadioTower,
-    proof: "Rules / logs / thresholds / limits",
-    stats: ["推荐流", "好友私信", "创作者监控"],
-  },
-];
-
-const flowSteps = [
-  { icon: MousePointer2, label: "发现", text: "搜索主页、推荐流、分享链接进入同一条线。" },
-  { icon: BrainCircuit, label: "判断", text: "AI 根据提示词辅助筛选、评论、私信或整理动作。" },
-  { icon: CircuitBoard, label: "确认", text: "写操作默认可控，敏感动作需要明确开启或确认。" },
-  { icon: Database, label: "归档", text: "下载、历史、配置和本地文件回到你的电脑。" },
-];
-
-const capabilityCards = [
-  {
-    icon: Archive,
-    code: "A / ARCHIVE",
-    signal: "Queue ready",
-    title: "批量归档",
-    description: "用户作品、搜索结果、推荐流、收藏、点赞和合集内容都能进入下载队列。",
-  },
-  {
-    icon: Workflow,
-    code: "B / TASKS",
-    signal: "Retry / speed / path",
-    title: "任务队列",
-    description: "进度、速度、失败重试和本地文件定位集中管理。",
-  },
-  {
-    icon: MessageCircle,
-    code: "C / DM",
-    signal: "Draft + reply",
-    title: "好友私信",
-    description: "好友列表、在线状态、消息记录、分享卡片与自动回复组合成桌面工作流。",
-  },
-  {
-    icon: Bell,
-    code: "D / NOTICE",
-    signal: "AI assisted",
-    title: "通知处理",
-    description: "点赞、评论、关注等互动通知可以统一查看，并交给 AI 规则辅助处理。",
-  },
-  {
-    icon: Play,
-    code: "E / PLAYER",
-    signal: "Autoplay",
-    title: "沉浸播放器",
-    description: "视频、图集、Live Photo、原声与自动连播形成完整观看体验。",
-  },
-  {
-    icon: LockKeyhole,
-    code: "F / LOCAL",
-    signal: "Private by default",
-    title: "本地优先",
-    description: "Cookie、配置、下载历史和本地文件保存在本机。",
-  },
-];
-
-const trustCards = [
-  {
-    icon: ShieldCheck,
-    title: "官方发行版完全免费",
-    text: "不存在官方付费版、激活码、会员解锁或收费代下服务。遇到售卖安装包、激活码、托管服务的，都不是官方授权。",
-  },
-  {
-    icon: LockKeyhole,
-    title: "本地优先保存",
-    text: "Cookie、账号、配置、下载历史、缓存和本地文件保存在本机；AI / MCP 也默认围绕本机应用运行。",
-  },
-  {
-    icon: Check,
-    title: "非商业使用边界",
-    text: "项目仅允许个人在合法、授权、非商业的学习、研究和测试场景中使用，禁止收费分发、SaaS、数据销售和账号营销获客。",
-  },
-];
-
-const versions = [
-  {
-    index: "01",
-    name: "better-douyin",
-    tech: "Python Desktop",
-    badge: "功能完整优先",
-    description: "成熟、可靠的完整桌面版本，适合需要稳定工作流与丰富能力的内容收藏者。",
-    bestFor: "想要功能覆盖最完整、生态最成熟、更新节奏最稳。",
-    points: ["完整功能", "成熟生态", "适合长期主力使用"],
-    tradeoff: "运行体积和启动速度不是最轻。",
-    href: releases.classic,
-    source: releases.classicSource,
-  },
-  {
-    index: "02",
-    name: "better-douyin-R",
-    tech: "Rust + Tauri",
-    badge: "轻量流畅优先",
-    description: "启动更快、占用更低的轻量版本，让浏览、本地播放与桌面分发始终顺滑。",
-    bestFor: "更在意启动速度、资源占用、轻量桌面体验。",
-    points: ["轻量运行时", "启动更快", "Tauri 架构"],
-    tradeoff: "少数新能力可能先在完整版本里验证。",
-    href: releases.rust,
-    source: releases.rustSource,
-  },
-];
-
-function readInitialTheme(): Theme {
-  const saved = window.localStorage.getItem("better-douyin-site-theme");
-  if (saved === "dark" || saved === "light") return saved;
-  return "dark";
-}
-
-function AmbientEffects() {
-  const reduceMotion = useReducedMotion();
-  const particlesRef = useRef<Array<HTMLSpanElement | null>>([]);
-
-  const setParticleRef = useCallback(
-    (index: number) => (element: HTMLSpanElement | null) => {
-      particlesRef.current[index] = element;
-    },
-    [],
-  );
-
-  useEffect(() => {
-    if (reduceMotion || window.matchMedia("(pointer: coarse)").matches) return;
-
-    let frame = 0;
-    let latestX = window.innerWidth / 2;
-    let latestY = window.innerHeight / 2;
-
-    const render = () => {
-      frame = 0;
-      const offsetX = latestX / window.innerWidth - 0.5;
-      const offsetY = latestY / window.innerHeight - 0.5;
-      document.documentElement.style.setProperty("--cursor-x", `${latestX}px`);
-      document.documentElement.style.setProperty("--cursor-y", `${latestY}px`);
-      particlesRef.current.forEach((particle, index) => {
-        if (!particle) return;
-        const depth = 8 + (index % 5) * 4;
-        particle.style.transform = `translate3d(${offsetX * depth}px, ${offsetY * depth}px, 0)`;
-      });
-    };
-
-    const onPointerMove = (event: PointerEvent) => {
-      latestX = event.clientX;
-      latestY = event.clientY;
-      if (!frame) frame = window.requestAnimationFrame(render);
-    };
-
-    window.addEventListener("pointermove", onPointerMove, { passive: true });
-    return () => {
-      window.removeEventListener("pointermove", onPointerMove);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, [reduceMotion]);
-
-  return (
-    <div className="ambient-effects" aria-hidden="true">
-      <span className="cursor-glow" />
-      <span className="cursor-glow cursor-glow-secondary" />
-      {ambientParticles.map(([x, y, size, opacity], index) => (
-        <span
-          className="ambient-particle"
-          key={`${x}-${y}`}
-          ref={setParticleRef(index)}
-          style={{
-            left: `${x}%`,
-            top: `${y}%`,
-            width: `${size}px`,
-            height: `${size}px`,
-            opacity: opacity / 100,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
 
 function Brand() {
   return (
-    <a className="brand" href="#top" aria-label="better-douyin 首页">
-      <span className="brand-mark">
-        <img src="./images/animated-icon.svg" alt="" />
-      </span>
-      <span>better-douyin</span>
-    </a>
-  );
-}
-
-function IconButton({ label, children, onClick }: { label: string; children: ReactNode; onClick: (event: ReactMouseEvent<HTMLButtonElement>) => void }) {
-  return (
-    <button className="icon-button" type="button" onClick={onClick} aria-label={label} title={label}>
-      {children}
+    <button className="brand" onClick={() => go("/")} aria-label="返回首页">
+      <span className="brand-mark">♪</span>
+      <b>better-douyin</b>
     </button>
   );
 }
-
-function Header({ theme, onThemeToggle }: { theme: Theme; onThemeToggle: () => void }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const headerRef = useRef<HTMLElement>(null);
-  const closeMenu = () => setMenuOpen(false);
-
-  useEffect(() => {
-    const header = headerRef.current;
-    if (!header) return;
-    let frame = 0;
-    const update = () => {
-      frame = 0;
-      header.classList.toggle("is-scrolled", window.scrollY > 8);
-    };
-    const onScroll = () => {
-      if (!frame) frame = window.requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, []);
-
+function Header({
+  page,
+  theme,
+  setTheme,
+}: {
+  page: string;
+  theme: Theme;
+  setTheme: (v: Theme) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const navigate = (path: string) => {
+    go(path);
+    setOpen(false);
+  };
   return (
-    <header className="site-header" ref={headerRef}>
+    <header>
       <Brand />
-      <nav className="desktop-nav" aria-label="主导航">
-        <a href="#intelligence">AI / MCP</a>
-        <a href="#experience">体验</a>
-        <a href="#trust">免费声明</a>
-        <a href="#download">版本 / 下载</a>
-        <a className="nav-github" href={releases.classicSource} target="_blank" rel="noreferrer">
-          <Github aria-hidden="true" />
-          GitHub
+      <nav className={open ? "nav open" : "nav"}>
+        <button
+          className={page === "home" ? "active" : ""}
+          onClick={() => navigate("/")}
+        >
+          产品
+        </button>
+        <button
+          className={page === "docs" ? "active" : ""}
+          onClick={() => navigate("/docs/intro")}
+        >
+          文档
+        </button>
+        <a href={REPO} target="_blank" rel="noreferrer">
+          GitHub <ExternalLink />
         </a>
       </nav>
       <div className="header-actions">
-        <IconButton label={theme === "dark" ? "切换到亮色主题" : "切换到暗色主题"} onClick={onThemeToggle}>
-          <span className="theme-icon-stack" aria-hidden="true">
-            <Sun className={theme === "dark" ? "theme-icon-active" : ""} />
-            <Moon className={theme === "light" ? "theme-icon-active" : ""} />
-          </span>
-        </IconButton>
         <button
-          className="icon-button mobile-menu-button"
-          type="button"
-          aria-label={menuOpen ? "关闭菜单" : "打开菜单"}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((open) => !open)}
+          className="square"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          aria-label="切换主题"
         >
-          {menuOpen ? <X /> : <Menu />}
+          {theme === "dark" ? <Sun /> : <Moon />}
+        </button>
+        <a
+          className="top-download"
+          href={RELEASES}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Download />
+          下载
+        </a>
+        <button
+          className="square hamburger"
+          onClick={() => setOpen(!open)}
+          aria-label={open ? "关闭导航" : "打开导航"}
+          aria-expanded={open}
+        >
+          {open ? <X /> : <Menu />}
         </button>
       </div>
-      <AnimatePresence>
-        {menuOpen ? (
-          <motion.nav
-            className="mobile-nav"
-            aria-label="移动端导航"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2, ease: EASE }}
-          >
-            <a href="#intelligence" onClick={closeMenu}>AI / MCP</a>
-            <a href="#experience" onClick={closeMenu}>体验</a>
-            <a href="#trust" onClick={closeMenu}>免费声明</a>
-            <a href="#download" onClick={closeMenu}>版本 / 下载</a>
-            <a href={releases.classicSource} target="_blank" rel="noreferrer">GitHub</a>
-          </motion.nav>
-        ) : null}
-      </AnimatePresence>
     </header>
   );
 }
-
-function ActionLink({ href, children, primary = false }: { href: string; children: ReactNode; primary?: boolean }) {
-  return (
-    <a className={primary ? "button button-primary" : "button button-secondary"} href={href}>
-      {children}
-    </a>
-  );
-}
-
-function Reveal({ children, className = "" }: { children: ReactNode; className?: string }) {
-  const reduceMotion = useReducedMotion();
+function Reveal({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const reduced = useReducedMotion();
   return (
     <motion.div
       className={className}
-      initial={reduceMotion ? false : revealInitial}
-      whileInView={reduceMotion ? undefined : revealInView}
-      viewport={{ once: true, amount: 0.12 }}
-      transition={revealTransition}
+      initial={reduced ? false : { opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
     >
       {children}
     </motion.div>
   );
 }
 
-function SectionLead({ kicker, title, muted }: { kicker: string; title: string; muted: string }) {
+const features = [
+  [
+    Search,
+    "发现",
+    "从主页到推荐流",
+    "搜索用户、浏览作品与推荐内容，把分散的入口收进一个桌面工作台。",
+    "screen-user-detail.png",
+  ],
+  [
+    Download,
+    "归档",
+    "下载之后，依然有序",
+    "批量任务、实时进度、本地扫描、筛选与文件定位，完整覆盖归档流程。",
+    "screen-downloads.png",
+  ],
+  [
+    Play,
+    "播放",
+    "内容形态完整保留",
+    "视频、图集、Live Photo、原声与 BGM，在沉浸播放器里自然衔接。",
+    "screen-player.png",
+  ],
+] as const;
+const advanced = [
+  [
+    Bot,
+    "AI / 01",
+    "智能互动",
+    "接入兼容 Chat Completions 的模型服务，用提示词约束评论、私信和内容处理。",
+  ],
+  [
+    Network,
+    "MCP / 02",
+    "连接你的 AI 工具",
+    "让兼容客户端复用桌面端登录态、下载目录和任务队列。",
+  ],
+  [
+    RadioTower,
+    "AUTO / 03",
+    "自动化监控",
+    "为推荐流、私信、通知和创作者更新设置规则、动作与运行上限。",
+  ],
+] as const;
+
+function Home() {
   return (
-    <Reveal className="section-lead">
-      <span className="section-kicker">
-        <Sparkles aria-hidden="true" />
-        {kicker}
-      </span>
-      <h2>{title}<span>{muted}</span></h2>
-    </Reveal>
-  );
-}
-
-function HeroBackdropImage({ src, className, active }: { src: string; className: string; active: boolean }) {
-  return (
-    <img
-      className={className}
-      src={active ? src : undefined}
-      alt=""
-      loading="eager"
-      decoding="async"
-      fetchPriority={active ? "high" : "low"}
-      onError={(event) => {
-        (event.currentTarget as HTMLImageElement).style.display = "none";
-      }}
-    />
-  );
-}
-
-function Hero({ theme }: { theme: Theme }) {
-  const reduceMotion = useReducedMotion();
-  const heroRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const hero = heroRef.current;
-    if (!hero || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver((entries) => {
-      document.documentElement.style.setProperty(
-        "--hero-anim-play",
-        entries[0].isIntersecting ? "running" : "paused",
-      );
-    });
-    observer.observe(hero);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <section className="hero" id="top" ref={heroRef}>
-      <div className="hero-backdrop" aria-hidden="true">
-        <HeroBackdropImage
-          className="hero-backdrop-image hero-backdrop-image-dark"
-          src="./images/hero-workspace-dark.jpg"
-          active={theme === "dark"}
-        />
-        <HeroBackdropImage
-          className="hero-backdrop-image hero-backdrop-image-light"
-          src="./images/hero-workspace-light.jpg"
-          active={theme === "light"}
-        />
-      </div>
-      <div className="hero-grid" aria-hidden="true" />
-      <div className="hero-inner">
-        <motion.div
-          className="hero-copy"
-          initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.68, ease: EASE }}
-        >
-          <span className="hero-eyebrow">
-            <Radar aria-hidden="true" />
-            Official local media workspace
-          </span>
-          <h1 aria-label="better-douyin">
-            <span>better</span>
-            <span className="spectral-text">douyin.</span>
-          </h1>
-        </motion.div>
-        <motion.div
-          className="hero-side"
-          initial={reduceMotion ? false : { opacity: 0, y: 22 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.68, delay: 0.1, ease: EASE }}
-        >
-          <p className="hero-tagline">
-            <strong>完全免费的本地媒体工作台。</strong>
-            <span>搜索、预览、批量归档，再把通知、好友私信、自动监控、AI 互动和 MCP 工具接进同一个桌面应用。</span>
-          </p>
-          <div className="hero-actions">
-            <ActionLink href="#download" primary>
-              下载官方发行版
-              <ArrowDown aria-hidden="true" />
-            </ActionLink>
-            <ActionLink href="#trust">
-              免费与安全边界
-              <ArrowRight aria-hidden="true" />
-            </ActionLink>
-          </div>
-          <div className="hero-console">
-            {heroSignals.map((signal) => (
-              <span key={signal.label}>
-                <small>{signal.label}</small>
-                {signal.value}
-              </span>
-            ))}
-          </div>
-          <p className="hero-proof-note">请从 GitHub Releases 下载官方发行版；Release 附带 checksums 可核对安装包完整性。</p>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-function TrustSection() {
-  return (
-    <section className="trust-section" id="trust">
-      <div className="section-inner trust-inner">
-        <Reveal className="trust-copy">
-          <span className="section-kicker">
-            <ShieldCheck aria-hidden="true" />
-            Free and official
-          </span>
-          <h2>官方版本免费，<span>也有清楚的使用边界。</span></h2>
+    <main>
+      <section className="hero">
+        <div className="hero-copy">
+          <motion.div
+            className="eyebrow"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <i /> 本地优先的抖音桌面工具
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0, y: 25 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            刷到喜欢的，
+            <br />
+            <em>留在自己的电脑里。</em>
+          </motion.h1>
           <p>
-            better-douyin 和 better-douyin-R 的官方发行版均免费提供。请关注作者和 GitHub 官方仓库，不要从第三方收费渠道购买安装包、激活码或所谓会员版。
+            浏览、播放、下载与管理，在一款精心设计的桌面应用里完成。更进一步，用
+            AI、MCP 和自动化构建自己的内容工作流。
+          </p>
+          <div className="actions">
+            <a
+              className="button primary"
+              href={RELEASES}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Download />
+              获取最新版
+            </a>
+            <button className="button" onClick={() => go("/docs/install")}>
+              <BookOpen />
+              阅读安装文档
+            </button>
+          </div>
+          <small className="hero-note">
+            <Check /> 免费开源　·　本地优先　·　仅供非商业使用
+          </small>
+        </div>
+        <motion.div
+          className="hero-visual"
+          initial={{ opacity: 0, scale: 0.96, x: 40 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          transition={{ duration: 0.9 }}
+        >
+          <img
+            src="./images/hero-workspace-dark.jpg"
+            alt="better-douyin 桌面应用主界面"
+          />
+          <div className="status">
+            <i />
+            <span>
+              <small>DOWNLOAD QUEUE</small>
+              <b>正在本地归档</b>
+            </span>
+            <Zap />
+          </div>
+        </motion.div>
+      </section>
+      <div className="signals">
+        <span>唯一官方版本</span>
+        <b>Rust + Tauri</b>
+        <i />
+        <span>项目状态</span>
+        <b>持续更新</b>
+        <i />
+        <span>代码与发行</span>
+        <a href={REPO}>GitHub ↗</a>
+      </div>
+      <section className="intro section">
+        <Reveal>
+          <label>THE BETTER WAY TO KEEP</label>
+          <h2>
+            不是下载器的堆砌，
+            <br />
+            是一套完整的桌面体验。
+          </h2>
+        </Reveal>
+        <Reveal>
+          <p>
+            从发现一个用户，到看完一组作品，再到保存、筛选和重新播放，better-douyin
+            把每个环节放在同一条流畅路径上。
+          </p>
+          <button className="text-link" onClick={() => go("/docs/intro")}>
+            了解它如何工作 <ArrowRight />
+          </button>
+        </Reveal>
+      </section>
+      <section className="features section">
+        {features.map(([Icon, tag, title, text, image], i) => (
+          <Reveal className={`feature ${i % 2 ? "reverse" : ""}`} key={title}>
+            <div className="feature-copy">
+              <small>
+                0{i + 1} / {tag}
+              </small>
+              <Icon />
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </div>
+            <div className="shot">
+              <img src={`./images/${image}`} alt={`${title}界面`} />
+            </div>
+          </Reveal>
+        ))}
+      </section>
+      <section className="power section">
+        <Reveal className="power-head">
+          <div>
+            <label>POWER WHEN YOU NEED IT</label>
+            <h2>简单使用，也能深度连接。</h2>
+          </div>
+          <p>
+            进阶能力不会挡在基础体验前面。需要时，它们随时可以把桌面端变成你的自动化中枢。
           </p>
         </Reveal>
-        <div className="trust-card-grid">
-          {trustCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <Reveal className="trust-card" key={card.title}>
-                <Icon aria-hidden="true" />
-                <h3>{card.title}</h3>
-                <p>{card.text}</p>
-              </Reveal>
-            );
-          })}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function IntelligenceSection() {
-  return (
-    <section className="section intelligence-section" id="intelligence">
-      <div className="section-inner">
-        <SectionLead kicker="AI layer" title="不止是下载器，" muted="它也能进入 AI 工作流。" />
-        <div className="intelligence-layout">
-          {intelligenceCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <Reveal
-                className={[
-                  "intelligence-card",
-                  card.featured && "intelligence-card-featured",
-                  card.eyebrow === "MCP" && "intelligence-card-proof",
-                  card.eyebrow === "AUTOMATION" && "intelligence-card-automation",
-                ].filter(Boolean).join(" ")}
-                key={card.eyebrow}
-              >
-                <div className="intelligence-head">
-                  <span>{card.eyebrow}</span>
-                  <Icon aria-hidden="true" />
-                </div>
-                <h3>{card.title}</h3>
-                <p>{card.description}</p>
-                {"image" in card && (
-                  <div className="intelligence-media">
-                    <img src={card.image} alt={card.imageAlt} loading="lazy" decoding="async" />
-                  </div>
-                )}
-                <div className="intelligence-proof">{card.proof}</div>
-                <div className="chip-row">
-                  {card.stats.map((stat) => <span key={stat}>{stat}</span>)}
-                </div>
-              </Reveal>
-            );
-          })}
-        </div>
-        <Reveal className="workflow-strip">
-          {flowSteps.map((step, index) => {
-            const Icon = step.icon;
-            return (
-              <article className="flow-step" key={step.label}>
-                <div className="flow-mark">
-                  <Icon aria-hidden="true" />
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                </div>
-                <h4>{step.label}</h4>
-                <p>{step.text}</p>
-              </article>
-            );
-          })}
-        </Reveal>
-        <Reveal className="feature-matrix">
-          <div className="feature-matrix-heading">
-            <span>Capability index</span>
-            <p>把常用动作收在一个清晰、可扫读的功能清单里。</p>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">功能</th>
-                <th scope="col">工作方式</th>
-                <th scope="col">能力标签</th>
-              </tr>
-            </thead>
-            <tbody>
-              {capabilityCards.map((card) => {
-                const Icon = card.icon;
-                return (
-                  <tr key={card.title}>
-                    <td>
-                      <span className="matrix-feature-name">
-                        <Icon aria-hidden="true" />
-                        <span>
-                          <small>{card.code}</small>
-                          <strong>{card.title}</strong>
-                        </span>
-                      </span>
-                    </td>
-                    <td>{card.description}</td>
-                    <td><span className="matrix-signal">{card.signal}</span></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
-function ExperienceSection() {
-  return (
-    <section className="section experience-section" id="experience">
-      <div className="section-inner">
-        <SectionLead kicker="Product feel" title="从发现到归档，" muted="动作要短，画面要顺。" />
-        <div className="feature-list">
-          {features.map((feature, index) => {
-            const Icon = feature.icon;
-            return (
-              <article className="feature-row" key={feature.label}>
-                <Reveal className="feature-copy">
-                  <span className="feature-index">{feature.number} / {feature.label}</span>
-                  <span className="feature-icon"><Icon aria-hidden="true" /></span>
-                  <h3>{feature.title}</h3>
-                  <p>{feature.description}</p>
-                </Reveal>
-                <Reveal className="feature-media">
-                  <img src={feature.image} alt={feature.imageAlt} loading={index === 0 ? "eager" : "lazy"} decoding="async" />
-                </Reveal>
-              </article>
-            );
-          })}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ManifestoSection() {
-  return (
-    <section className="manifesto-section" aria-label="产品理念">
-      <Reveal className="manifesto-inner">
-        <p>
-          信息流让内容快速经过，<span>better-douyin 让它停下来。</span>
-          从一次观看，变成可检索、可管理、可再次抵达的本地资料库。
-        </p>
-      </Reveal>
-    </section>
-  );
-}
-
-function DownloadSection() {
-  return (
-    <section className="download-section" id="download">
-      <Reveal className="download-inner">
-        <span className="section-kicker">
-          <WandSparkles aria-hidden="true" />
-          Choose your build
-        </span>
-        <h2>选择版本，<span>从官方渠道下载。</span></h2>
-        <p>两个版本都免费。Python 版偏完整与可改造，Rust / Tauri 版偏轻量和桌面体验；普通用户优先选择 Rust / Tauri 版。</p>
-        <div className="version-choice-grid" id="versions">
-          {versions.map((version) => (
-            <article className="version-choice-card" key={version.name}>
-              <div className="version-card-top">
-                <span className="version-index">{version.index}</span>
-                <span className="version-tech">{version.tech}</span>
-              </div>
-              <span className="version-badge">{version.badge}</span>
-              <h3>{version.name}</h3>
-              <p>{version.description}</p>
-              <div className="version-fit">
-                <strong>适合你，如果：</strong>
-                <span>{version.bestFor}</span>
-              </div>
-              <ul>
-                {version.points.map((point) => <li key={point}><Check aria-hidden="true" />{point}</li>)}
-              </ul>
-              <small>{version.tradeoff}</small>
-              <div className="version-actions">
-                <ActionLink href={version.href} primary>
-                  <Download aria-hidden="true" />
-                  下载
-                </ActionLink>
-                <ActionLink href={version.source}>
-                  <Github aria-hidden="true" />
-                  源码
-                </ActionLink>
-              </div>
-            </article>
+        <div className="power-list">
+          {advanced.map(([Icon, code, title, text]) => (
+            <Reveal className="power-row" key={code}>
+              <small>{code}</small>
+              <Icon />
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </Reveal>
           ))}
         </div>
-        <small>请只在合法、授权、非商业的场景中使用。任何收费倒卖、代下载、托管服务或商业分发均非官方授权。</small>
-      </Reveal>
-    </section>
+      </section>
+      <section className="trust section">
+        <Reveal>
+          <ShieldCheck className="trust-icon" />
+          <label>LOCAL FIRST</label>
+          <h2>
+            你的账号与文件，
+            <br />
+            首先属于你。
+          </h2>
+          <p>
+            Cookie、配置、下载历史和本地文件保存在你的电脑上。AI 与 MCP
+            能力围绕本机运行，敏感操作保持明确、可控。
+          </p>
+          <button className="text-link" onClick={() => go("/docs/privacy")}>
+            阅读隐私与安全说明 <ArrowRight />
+          </button>
+        </Reveal>
+        <Reveal className="terminal">
+          <div>
+            ●　●　●　 <span>better-douyin / status</span>
+          </div>
+          <pre>
+            <code>
+              <i>$</i> better-douyin doctor{"\n\n"}
+              <b>✓</b> Local storage　　　 ready{"\n"}
+              <b>✓</b> Download directory　 configured{"\n"}
+              <b>✓</b> MCP transport　　　 localhost only{"\n"}
+              <b>✓</b> Update channel　　　GitHub Releases
+            </code>
+          </pre>
+        </Reveal>
+      </section>
+      <section className="cta">
+        <Reveal>
+          <label>READY WHEN YOU ARE</label>
+          <h2>
+            让喜欢的内容，
+            <br />
+            拥有一个更好的去处。
+          </h2>
+          <div className="actions">
+            <a className="button primary" href={RELEASES}>
+              <Download />
+              下载 better-douyin
+            </a>
+            <button className="button" onClick={() => go("/docs/intro")}>
+              先看看文档 <ArrowRight />
+            </button>
+          </div>
+          <p>官方版本完全免费。请勿购买安装包、激活码或所谓会员服务。</p>
+        </Reveal>
+      </section>
+    </main>
+  );
+}
+
+function Callout({
+  children,
+  warn = false,
+}: {
+  children: ReactNode;
+  warn?: boolean;
+}) {
+  return (
+    <div className={`callout ${warn ? "warn" : ""}`}>
+      <b>{warn ? "!" : "i"}</b>
+      <span>{children}</span>
+    </div>
+  );
+}
+function Code({ children }: { children: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="code">
+      <code>{children}</code>
+      <button
+        onClick={() => {
+          navigator.clipboard?.writeText(children);
+          setCopied(true);
+        }}
+      >
+        {copied ? (
+          "已复制"
+        ) : (
+          <>
+            <Clipboard />
+            复制
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+function ReleaseLink() {
+  return (
+    <a className="doc-link" href={RELEASES} target="_blank" rel="noreferrer">
+      <Download />
+      <span>
+        <b>打开 Latest Release</b>
+        <small>github.com/anYuJia/better-douyin</small>
+      </span>
+      <ArrowRight />
+    </a>
+  );
+}
+
+const content: Record<
+  string,
+  { over: string; title: string; desc: string; body: ReactNode }
+> = {
+  intro: {
+    over: "GETTING STARTED",
+    title: "认识 better-douyin",
+    desc: "一款本地优先的抖音桌面工具，从浏览到归档，让内容管理回到一条完整路径。",
+    body: (
+      <>
+        <h2>它解决什么问题</h2>
+        <p>
+          better-douyin
+          把用户搜索、推荐浏览、作品播放、批量下载与本地管理放进同一个桌面应用。你不需要在多个网页、脚本和文件夹之间切换。
+        </p>
+        <div className="doc-grid">
+          <div>
+            <Search />
+            <b>发现内容</b>
+            <span>搜索用户、浏览作品与推荐流。</span>
+          </div>
+          <div>
+            <HardDrive />
+            <b>本地归档</b>
+            <span>任务队列、历史记录和文件管理。</span>
+          </div>
+          <div>
+            <Sparkles />
+            <b>扩展工作流</b>
+            <span>按需启用 AI、MCP 与自动化。</span>
+          </div>
+        </div>
+        <h2>开始之前</h2>
+        <p>
+          项目面向个人合法、授权、非商业的学习、研究和测试场景。使用前请了解账号安全、内容版权与平台规则。
+        </p>
+        <Callout>
+          这是唯一官方版本。旧的多版本说明已移除，源码与发行包均以 GitHub
+          仓库为准。
+        </Callout>
+      </>
+    ),
+  },
+  install: {
+    over: "INSTALLATION",
+    title: "安装",
+    desc: "从官方 Releases 获取适合你的构建，并完成第一次启动。",
+    body: (
+      <>
+        <h2>1. 获取发行包</h2>
+        <p>
+          打开 GitHub
+          Releases，选择最新稳定版本。具体支持平台与文件格式以当前版本的 Assets
+          列表为准。
+        </p>
+        <ReleaseLink />
+        <h2>2. 安装并启动</h2>
+        <p>
+          下载与你系统匹配的安装文件，按照系统提示完成安装。首次启动如遇安全提示，请确认文件来自官方仓库。
+        </p>
+        <Callout warn>
+          不要从网盘群、二手平台或收费渠道购买安装包。项目没有官方付费版、激活码或会员解锁。
+        </Callout>
+        <h2>3. 保持更新</h2>
+        <p>
+          新版本通过 GitHub Releases 发布。升级前建议退出正在运行的下载任务。
+        </p>
+      </>
+    ),
+  },
+  "first-run": {
+    over: "FIRST RUN",
+    title: "首次使用",
+    desc: "完成登录、下载目录和基础偏好设置。",
+    body: (
+      <>
+        <h2>登录与会话</h2>
+        <p>
+          按照应用内提示完成登录。登录信息用于在本机保持会话，请不要分享
+          Cookie、调试日志或配置文件。
+        </p>
+        <h2>设置下载目录</h2>
+        <p>选择空间充足、方便备份的位置。之后可以在设置中修改。</p>
+        <h2>快速检查</h2>
+        <ol>
+          <li>搜索一个公开用户并打开主页。</li>
+          <li>播放一个作品，确认媒体加载正常。</li>
+          <li>添加一个下载任务，确认目录写入权限。</li>
+        </ol>
+      </>
+    ),
+  },
+  download: {
+    over: "GUIDE",
+    title: "下载与管理",
+    desc: "把作品加入队列，查看进度，并在本地重新整理。",
+    body: (
+      <>
+        <h2>创建任务</h2>
+        <p>
+          在用户作品、推荐流、搜索结果或详情页使用下载入口。批量操作前先确认数量与存储空间。
+        </p>
+        <h2>任务队列</h2>
+        <p>
+          队列集中显示等待、进行中、完成与失败状态。网络中断或解析失败时，可以在任务详情中重试。
+        </p>
+        <h2>本地文件</h2>
+        <p>
+          “我的下载”会扫描配置目录并生成作品视图，你可以搜索、筛选、播放、定位或删除。
+        </p>
+      </>
+    ),
+  },
+  player: {
+    over: "GUIDE",
+    title: "播放器",
+    desc: "播放视频、图集、Live Photo 与音频内容。",
+    body: (
+      <>
+        <h2>支持的内容形态</h2>
+        <p>
+          播放器根据作品类型显示相应控制，包括视频进度、音量、倍速、清晰度、图集切换以及自动连播。
+        </p>
+        <h2>播放问题</h2>
+        <p>
+          如果画面无法加载，先检查作品是否仍可访问，再确认登录状态与网络环境。
+        </p>
+      </>
+    ),
+  },
+  messages: {
+    over: "GUIDE",
+    title: "通知与私信",
+    desc: "在桌面端集中查看互动、好友与会话。",
+    body: (
+      <>
+        <h2>通知中心</h2>
+        <p>
+          点赞、评论与关注等通知集中展示，可跳转到来源内容。后台刷新频率应保持合理。
+        </p>
+        <h2>好友与私信</h2>
+        <p>
+          好友列表、在线状态、历史消息与未读提醒组成桌面会话视图。发送前请确认对象与内容。
+        </p>
+      </>
+    ),
+  },
+  ai: {
+    over: "ADVANCED",
+    title: "AI 配置",
+    desc: "连接兼容服务商，并用提示词定义能力边界。",
+    body: (
+      <>
+        <h2>准备接口信息</h2>
+        <p>
+          在设置中填写服务地址、API Key
+          与模型名称。支持范围以应用内当前配置项为准。
+        </p>
+        <Code>{`Base URL: https://api.example.com/v1\nModel: your-model-name\nAPI Key: ••••••••••••`}</Code>
+        <h2>提示词与安全</h2>
+        <p>
+          系统提示词定义角色、语气和禁止事项。先在低风险场景验证，再逐步开放写操作。
+        </p>
+        <Callout warn>
+          API Key 会关联你的服务额度，不要出现在截图、日志或共享配置中。
+        </Callout>
+      </>
+    ),
+  },
+  mcp: {
+    over: "ADVANCED",
+    title: "MCP",
+    desc: "让兼容的 AI 客户端调用 better-douyin 的本机能力。",
+    body: (
+      <>
+        <h2>工作方式</h2>
+        <p>
+          应用提供面向本机的 MCP
+          服务，客户端通过本地地址发现工具。可用工具以应用内 MCP 页面为准。
+        </p>
+        <h2>连接步骤</h2>
+        <ol>
+          <li>在应用中开启 MCP 服务。</li>
+          <li>复制应用显示的连接配置。</li>
+          <li>添加到兼容客户端并加载工具。</li>
+          <li>先运行只读查询确认连接。</li>
+        </ol>
+        <Callout>
+          涉及关注、发送消息或删除内容的写操作，应保持人工确认。
+        </Callout>
+      </>
+    ),
+  },
+  automation: {
+    over: "ADVANCED",
+    title: "自动化",
+    desc: "用规则持续观察，但始终保留清晰的上限。",
+    body: (
+      <>
+        <h2>创建规则</h2>
+        <p>
+          选择监控来源、触发条件和执行动作，然后设置运行频率、每日上限与失败处理。首次建议只记录日志。
+        </p>
+        <h2>观察运行日志</h2>
+        <p>
+          定期检查触发次数、跳过原因和错误记录。环境变化时，请暂停规则并重新验证。
+        </p>
+      </>
+    ),
+  },
+  privacy: {
+    over: "TRUST & SAFETY",
+    title: "隐私与安全",
+    desc: "了解哪些信息保存在本机，以及如何降低账号与数据风险。",
+    body: (
+      <>
+        <h2>本地优先</h2>
+        <p>
+          配置、会话信息、下载历史和媒体文件主要保存在本机。启用第三方 AI
+          时，发送内容受对应服务商政策约束。
+        </p>
+        <h2>安全建议</h2>
+        <ul>
+          <li>仅从官方 GitHub Releases 下载。</li>
+          <li>不要分享 Cookie、API Key、配置或完整日志。</li>
+          <li>为自动化设置频率与操作上限。</li>
+          <li>重要文件与配置定期备份。</li>
+        </ul>
+        <h2>使用边界</h2>
+        <p>不得用于收费分发、数据销售、账号营销、批量骚扰或绕过平台限制。</p>
+      </>
+    ),
+  },
+  troubleshooting: {
+    over: "SUPPORT",
+    title: "故障排查",
+    desc: "从更新、会话、网络和目录权限开始定位问题。",
+    body: (
+      <>
+        <h2>应用无法启动</h2>
+        <p>确认安装包来自官方仓库并与你的系统匹配，尝试安装最新版本。</p>
+        <h2>无法加载内容</h2>
+        <p>
+          依次检查网络、登录状态、作品可见性和当前版本。退出后重新登录可能修复过期会话。
+        </p>
+        <h2>下载失败</h2>
+        <p>
+          确认目录存在且可写，磁盘空间充足。连续失败时请保留版本号与脱敏日志。
+        </p>
+        <a className="doc-link" href={`${REPO}/issues`}>
+          <MessageCircle />
+          <span>
+            <b>前往 GitHub Issues</b>
+            <small>搜索问题或提交可复现报告</small>
+          </span>
+          <ArrowRight />
+        </a>
+      </>
+    ),
+  },
+  faq: {
+    over: "SUPPORT",
+    title: "常见问题",
+    desc: "关于费用、版本、平台与账号安全的快速回答。",
+    body: (
+      <div className="faq">
+        <details open>
+          <summary>
+            软件收费吗？
+            <ChevronRight />
+          </summary>
+          <p>不收费。项目没有官方付费版、激活码、会员或收费代下服务。</p>
+        </details>
+        <details>
+          <summary>
+            为什么不再区分 Python 与 Rust 版本？
+            <ChevronRight />
+          </summary>
+          <p>
+            当前唯一维护的产品就是 GitHub 上的 better-douyin，采用 Rust +
+            Tauri。
+          </p>
+        </details>
+        <details>
+          <summary>
+            支持哪些操作系统？
+            <ChevronRight />
+          </summary>
+          <p>
+            请以最新 Release
+            的构建产物为准，官网不会承诺当前发行包中不存在的平台。
+          </p>
+        </details>
+        <details>
+          <summary>
+            使用会导致账号风险吗？
+            <ChevronRight />
+          </summary>
+          <p>任何第三方工具都无法承诺零风险。请遵守平台规则并控制请求频率。</p>
+        </details>
+      </div>
+    ),
+  },
+};
+
+function Docs({ section }: { section: string }) {
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const active = content[section] ? section : "intro";
+  const data = content[active];
+  const index = pages.findIndex((p) => p[0] === active);
+  const filtered = pages.filter((p) =>
+    p[1].toLowerCase().includes(query.trim().toLowerCase()),
+  );
+  const groups = [...new Set(filtered.map((p) => p[2]))];
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    addEventListener("keydown", shortcut);
+    return () => removeEventListener("keydown", shortcut);
+  }, []);
+  return (
+    <main className="docs">
+      <aside className="sidebar">
+        <div className="search">
+          <Search />
+          <input
+            ref={searchRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="搜索文档"
+            aria-label="搜索文档章节"
+          />
+          <kbd>⌘K</kbd>
+        </div>
+        {groups.map((g) => (
+          <div className="side-group" key={g}>
+            <b>{g}</b>
+            {filtered
+              .filter((p) => p[2] === g)
+              .map((p) => (
+                <button
+                  key={p[0]}
+                  className={p[0] === active ? "active" : ""}
+                  onClick={() => {
+                    setQuery("");
+                    go(`/docs/${p[0]}`);
+                  }}
+                >
+                  {p[1]}
+                </button>
+              ))}
+          </div>
+        ))}
+        {filtered.length === 0 && <p className="no-results">没有匹配的章节</p>}
+      </aside>
+      <article>
+        <div className="crumb">
+          <BookOpen />
+          文档 <ChevronRight /> {data.title}
+        </div>
+        <motion.div
+          className="doc-head"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <label>{data.over}</label>
+          <h1>{data.title}</h1>
+          <p>{data.desc}</p>
+        </motion.div>
+        <div className="doc-body">{data.body}</div>
+        <div className="pager">
+          {index > 0 ? (
+            <button onClick={() => go(`/docs/${pages[index - 1][0]}`)}>
+              <small>上一篇</small>
+              <b>← {pages[index - 1][1]}</b>
+            </button>
+          ) : (
+            <span />
+          )}
+          {index < pages.length - 1 && (
+            <button onClick={() => go(`/docs/${pages[index + 1][0]}`)}>
+              <small>下一篇</small>
+              <b>{pages[index + 1][1]} →</b>
+            </button>
+          )}
+        </div>
+      </article>
+      <aside className="toc">
+        <b>本页内容</b>
+        <span>{data.title}</span>
+        <a href={`${REPO}/issues`}>
+          <Github />
+          反馈问题
+        </a>
+      </aside>
+    </main>
   );
 }
 
 function Footer() {
   return (
-    <footer className="site-footer">
+    <footer>
       <Brand />
-      <p>Official builds are free. Local first. Built with care.</p>
+      <p>一个更好的抖音桌面体验。</p>
       <div>
-        <a href={releases.classicSource} target="_blank" rel="noreferrer">Python</a>
-        <a href={releases.rustSource} target="_blank" rel="noreferrer">Rust</a>
+        <button onClick={() => go("/docs/intro")}>文档</button>
+        <a href={REPO}>GitHub</a>
+        <a href={`${REPO}/issues`}>反馈</a>
       </div>
+      <small>
+        © {new Date().getFullYear()} better-douyin · 仅供学习、研究和非商业使用
+      </small>
     </footer>
   );
 }
-
-const MemoAmbientEffects = memo(AmbientEffects);
-const MemoHeader = memo(Header);
-const MemoHero = memo(Hero);
-const MemoTrustSection = memo(TrustSection);
-const MemoIntelligenceSection = memo(IntelligenceSection);
-const MemoExperienceSection = memo(ExperienceSection);
-const MemoManifestoSection = memo(ManifestoSection);
-const MemoDownloadSection = memo(DownloadSection);
-const MemoFooter = memo(Footer);
-
 export default function App() {
-  const [theme, setTheme] = useState<Theme>(readInitialTheme);
-  const flashRef = useRef<HTMLDivElement>(null);
-  const flashingRef = useRef(false);
-
+  const [location, setLocation] = useState(route),
+    [theme, setTheme] = useState<Theme>(
+      () => (localStorage.getItem("bd-theme") as Theme) || "dark",
+    );
   useEffect(() => {
-    applyTheme(theme);
+    const update = () => setLocation(route());
+    addEventListener("hashchange", update);
+    return () => removeEventListener("hashchange", update);
+  }, []);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("bd-theme", theme);
   }, [theme]);
-
-  const toggleTheme = useCallback(() => {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    const commit = () => {
-      applyTheme(next);
-      setTheme(next);
-    };
-    const flash = flashRef.current;
-    const reduceMotion =
-      typeof window.matchMedia === "function"
-        && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    if (!flash || reduceMotion || flashingRef.current) {
-      commit();
-      return;
-    }
-
-    flashingRef.current = true;
-    flash.style.transition = "none";
-    flash.style.backgroundColor = themeBackgrounds[next];
-    flash.style.opacity = "0";
-    window.requestAnimationFrame(() => {
-      flash.style.transition = "opacity 130ms ease";
-      flash.style.opacity = "1";
-    });
-    window.setTimeout(() => {
-      commit();
-      flash.style.transition = "opacity 220ms ease";
-      flash.style.opacity = "0";
-    }, 150);
-    window.setTimeout(() => {
-      flashingRef.current = false;
-    }, 420);
-  }, [theme]);
-
+  useEffect(() => {
+    const title =
+      location.page === "docs"
+        ? content[location.section]?.title || "文档"
+        : "本地媒体工作台";
+    document.title = `${title} · better-douyin`;
+  }, [location]);
   return (
     <>
-      <div className="theme-flash" ref={flashRef} aria-hidden="true" />
-      <MemoAmbientEffects />
-      <MemoHeader theme={theme} onThemeToggle={toggleTheme} />
-      <main>
-        <MemoHero theme={theme} />
-        <MemoTrustSection />
-        <MemoIntelligenceSection />
-        <MemoExperienceSection />
-        <MemoManifestoSection />
-        <MemoDownloadSection />
-      </main>
-      <MemoFooter />
+      <Header page={location.page} theme={theme} setTheme={setTheme} />
+      {location.page === "home" ? (
+        <>
+          <Home />
+          <Footer />
+        </>
+      ) : (
+        <Docs section={location.section} />
+      )}
     </>
   );
 }
