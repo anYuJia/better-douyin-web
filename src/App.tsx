@@ -459,7 +459,6 @@ function Docs({ section }: { section: string }) {
   const [readingProgress, setReadingProgress] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
   const articleRef = useRef<HTMLElement>(null);
-  const sidebarRef = useRef<HTMLElement>(null);
   const active = content[section] ? section : "intro";
   const data = content[active];
   const index = pages.findIndex((page) => page.id === active);
@@ -525,16 +524,6 @@ function Docs({ section }: { section: string }) {
   }, [active]);
 
   useEffect(() => {
-    const sidebar = sidebarRef.current;
-    const button = sidebar?.querySelector<HTMLElement>(
-      `[data-doc-section="${active}"]`,
-    );
-    if (!sidebar || !button) return;
-    const target = Math.max(button.offsetTop - sidebar.clientHeight * 0.38, 0);
-    sidebar.scrollTo({ top: target, behavior: "instant" });
-  }, [active]);
-
-  useEffect(() => {
     const updateProgress = () => {
       const article = articleRef.current;
       if (!article) return;
@@ -562,7 +551,7 @@ function Docs({ section }: { section: string }) {
 
   return (
     <main className="docs">
-      <aside ref={sidebarRef} className="sidebar" aria-label="文档目录">
+      <aside className="sidebar" aria-label="文档目录">
         <div className="docs-identity">
           <span>PRODUCT MANUAL</span>
           <b>使用文档</b>

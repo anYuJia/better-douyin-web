@@ -55,20 +55,25 @@ export function CodeBlock({
 
   return (
     <div className="code">
-      <div className="code-label">{label}</div>
-      <code>{children}</code>
-      <button
-        type="button"
-        onClick={() => void copy()}
-        aria-label={`复制${label}`}
-      >
-        {copied ? (
-          <Check aria-hidden="true" />
-        ) : (
-          <Clipboard aria-hidden="true" />
-        )}
-        {copied ? "已复制" : "复制"}
-      </button>
+      <div className="code-toolbar">
+        <span className="code-label">{label}</span>
+        <button
+          type="button"
+          className={copied ? "copied" : ""}
+          onClick={() => void copy()}
+          aria-label={`复制${label}`}
+        >
+          {copied ? (
+            <Check aria-hidden="true" />
+          ) : (
+            <Clipboard aria-hidden="true" />
+          )}
+          {copied ? "已复制" : "复制"}
+        </button>
+      </div>
+      <pre tabIndex={0} aria-label={`${label}代码`}>
+        <code>{children}</code>
+      </pre>
     </div>
   );
 }

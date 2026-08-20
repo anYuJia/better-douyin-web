@@ -9,6 +9,15 @@
   --red: oklch(63% 0.245 18);
   --cyan: oklch(84% 0.15 190);
   --green: oklch(78% 0.16 155);
+  --code-bg: oklch(16% 0.018 255);
+  --code-text: oklch(92% 0.018 190);
+  --code-muted: oklch(66% 0.018 255);
+  --code-border: oklch(100% 0.01 255/14%);
+  --code-button-bg: oklch(23% 0.02 255/88%);
+  --code-button-hover: oklch(29% 0.024 255/94%);
+  --code-button-border: oklch(100% 0.01 255/17%);
+  --code-button-text: oklch(91% 0.008 80);
+  --code-copied: oklch(82% 0.15 155);
   --shadow: 0 35px 100px oklch(5% 0.02 255/55%);
   font-family: "Manrope Variable", "Noto Sans SC Variable", sans-serif;
   color: var(--text);
@@ -24,6 +33,15 @@
   --muted: oklch(44% 0.018 255);
   --dim: oklch(57% 0.018 255);
   --line: oklch(20% 0.02 255/12%);
+  --code-bg: oklch(94% 0.012 255);
+  --code-text: oklch(24% 0.018 255);
+  --code-muted: oklch(48% 0.018 255);
+  --code-border: oklch(20% 0.02 255/14%);
+  --code-button-bg: oklch(99% 0.005 255/86%);
+  --code-button-hover: oklch(100% 0.005 255/96%);
+  --code-button-border: oklch(20% 0.02 255/16%);
+  --code-button-text: oklch(31% 0.018 255);
+  --code-copied: oklch(44% 0.15 155);
   --shadow: 0 28px 80px oklch(30% 0.03 255/18%);
 }
 * {
@@ -788,28 +806,114 @@ footer small {
 }
 .code {
   position: relative;
-  white-space: pre-wrap;
-  padding: 24px;
-  background: oklch(11% 0.014 255);
-  color: oklch(86% 0.03 190);
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  font-size: 0.75rem;
+  min-width: 0;
+  margin: 24px 0;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid var(--code-border);
+  border-radius: 12px;
+  background: var(--code-bg);
+  color: var(--code-text);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--text) 8%, transparent),
+    0 12px 30px color-mix(in oklab, var(--bg) 18%, transparent);
+}
+.code-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  margin-bottom: 14px;
+}
+.code-label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--code-muted);
+  font-size: 0.61rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 .code button {
-  position: absolute;
-  right: 8px;
-  top: 8px;
-  border: 1px solid oklch(100% 0 0/12%);
-  background: oklch(20% 0.014 255);
-  color: oklch(75% 0 0);
-  border-radius: 6px;
-  padding: 6px;
-  font-size: 0.62rem;
+  min-width: 70px;
+  min-height: 40px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid var(--code-button-border);
+  border-radius: 8px;
+  background: var(--code-button-bg);
+  color: var(--code-button-text);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: inset 0 1px 0 color-mix(in oklab, var(--text) 8%, transparent);
+  transition:
+    background-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.code button:hover {
+  border-color: color-mix(in oklab, var(--code-button-border) 70%, var(--text));
+  background: var(--code-button-hover);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--text) 12%, transparent),
+    0 5px 14px color-mix(in oklab, var(--bg) 18%, transparent);
+}
+.code button:active {
+  transform: scale(0.96);
+}
+.code button.copied {
+  border-color: color-mix(
+    in oklab,
+    var(--code-copied) 52%,
+    var(--code-button-border)
+  );
+  color: var(--code-copied);
 }
 .code button svg {
-  width: 11px;
-  vertical-align: middle;
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+.code pre {
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 2px 2px;
+  overflow-x: auto;
+  color: var(--code-text);
+  font-family: "Manrope Variable", "Noto Sans SC Variable", monospace;
+  font-size: 0.78rem;
+  line-height: 1.75;
+  overscroll-behavior-inline: contain;
+  scrollbar-color: color-mix(in oklab, var(--code-text) 24%, transparent)
+    transparent;
+  scrollbar-width: thin;
+  white-space: pre;
+}
+.code pre:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+.code pre code {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  white-space: inherit;
 }
 .doc-link {
   display: flex;
@@ -1489,30 +1593,9 @@ body {
 
 .code {
   min-height: 104px;
-  padding: 45px 24px 22px;
-  margin: 24px 0;
-  overflow-x: auto;
-  line-height: 1.75;
-}
-.code-label {
-  position: absolute;
-  top: 12px;
-  left: 24px;
-  color: oklch(62% 0.012 255);
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
 }
 .code button {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 9px;
-}
-.code button svg {
-  width: 12px;
-  height: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .doc-image {
